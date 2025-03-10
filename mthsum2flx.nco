@@ -8,7 +8,7 @@
    var_nm='smbgl'
    ncap2 -O -v --script="var_nm=${var_nm}" -S ${HOME}/racmo/mthsum2flx.nco ~/nco/data/in.nc ~/foo.nc */ 
 
-if(!exists(var_nm)) var_nm="smbgl";
+//if(!exists(var_nm)) var_nm="smbgl";
 
 *yr_srt=1980;
 *yr_nbr=41;
@@ -21,13 +21,20 @@ if($time.size != mth_nbr){
 
 // Create array of same length as time dimension of input variable
 *sec_per_mth[$time]=0; // noleap 365-day calendar, 0-based indexing
-sec_per_mth={2678400,2419200,2678400,2592000,2678400,2592000,2678400,2678400,2592000,2678400,2592000,2678400};
+sec_per_mth(0:11)={2678400,2419200,2678400,2592000,2678400,2592000,2678400,2678400,2592000,2678400,2592000,2678400};
 *sec_per_mth_ts[$time]=0; // noleap 365-day calendar, 0-based indexing
-for(yr_idx=0;yr_idx<=yr_nbr;yr_idx++){
+for(*yr_idx=0;yr_idx<yr_nbr;yr_idx++){
    *mth_idx=yr_idx*12;
-   *sec_per_mth_ts[mth_idx:mth_idx+11]=sec_per_mth;
+   *sec_per_mth_ts(mth_idx:mth_idx+11)=sec_per_mth(0:11);
 } // !yr
-print(sec_per_mth_ts);
 
-// Do the math
-var_nm*=sec_per_mth_ts;
+@all=get_vars_in();
+*sz=@all.size();
+for(*idx=0;idx<sz;idx++){
+  @var_nm=@all(idx);
+  if(*@var_nm.ndims() >= 3){
+    // Do the math
+    *@var_nm*=sec_per_mth_ts;
+  } // !var_nm.ndims
+} // !idx
+

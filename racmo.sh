@@ -67,7 +67,7 @@ for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Full filename
     echo ${cmd_att}
     eval ${cmd_att}
 
-    # Remove height dimension
+    # Remove height dimension (fxm: if it exists)
     cmd_hgt="ncwa -O -a height ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}"
     echo ${cmd_hgt}
     eval ${cmd_hgt}
@@ -78,6 +78,8 @@ for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Full filename
     eval ${cmd_flx}
     # ncap2 -O -s '*foo=1' ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}
 
+    # Print space for tidy output
+    echo ""
     # if false; then
     #    fi # !false
 done # !fll_nm
