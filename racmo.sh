@@ -1,25 +1,28 @@
 #!/usr/bin/env bash
 
-# Purpose: Convert raw RACMO v2.4.1 data into format used by LIVVKit
+# Purpose: Convert raw RACMO v2.4.1 data into LIVVKit input
 # Prequisites: NCO
 
 # Usage:
 # ~/racmo/racmo.sh 
 # ~/racmo/racmo.sh > ~/foo.txt 2>&1 &
 
-# Synchronize generated ice-sheet mask files to local grid directory
-# cd ${DATA}/grids;rsync 'zender@imua.ess.uci.edu:data/grids/msk_?is_r??.nc' .;ls -l msk_?is_r??.nc
-
-unset sec_per_mth # [s] Seconds per month
-declare -a sec_per_mth
-sec_per_mth=(0 2678400 2419200 2678400 2592000 2678400 2592000 2678400 2678400 2592000 2678400 2592000 2678400) # noleap 365-day calendar, 1-based indexing
-
 # Locations of Chloe's GIS data
 # /global/cfs/cdirs/fanssie/racmo/raw/RACMO2.4/FGRN055/mon_climos
 # /global/cfs/cdirs/fanssie/racmo/raw/RACMO2.4/PXANT11/???_climos
 
-#drc_root='/global/cfs/cdirs/fanssie' # Perlmutter
-drc_root="${DATA}" # Spectral
+spt_src="${BASH_SOURCE[0]}"
+spt_nm=$(basename ${spt_src}) # [sng] Script name (unlike $0, ${BASH_SOURCE[0]} works well with 'source <script>')
+
+if [ "${LMOD_SYSTEM_NAME}" = 'perlmutter' ]; then
+    drc_root='/global/cfs/cdirs/fanssie' # Perlmutter
+elif [ "${HOSTNAME}" = 'spectral' ]; then
+    drc_root="${DATA}" # Spectral
+else
+    echo "${spt_nm}: ERROR Invalid \${rgn_rsn} = ${rgn_rsn}"
+    exit 1
+fi # !HOSTNAME
+
 drc_raw="${drc_root}/racmo/2.4.1/raw"
 drc_ts="${drc_root}/racmo/2.4.1/ts"
 #for fll_nm in `ls ${drc_raw}`; do
