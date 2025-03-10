@@ -12,6 +12,14 @@
 # /global/cfs/cdirs/fanssie/racmo/raw/RACMO2.4/PXANT11/???_climos
 
 spt_src="${BASH_SOURCE[0]}"
+[[ -z "${spt_src}" ]] && spt_src="${0}" # Use ${0} when BASH_SOURCE is unavailable (e.g., dash)
+while [ -h "${spt_src}" ]; do # Recursively resolve ${spt_src} until file is no longer a symlink
+  drc_spt="$( cd -P "$( dirname "${spt_src}" )" && pwd )"
+  spt_src="$(readlink "${spt_src}")"
+  [[ ${spt_src} != /* ]] && spt_src="${drc_spt}/${spt_src}" # If ${spt_src} was relative symlink, resolve it relative to path where symlink file was located
+done
+cmd_ln="${spt_src} ${@}"
+drc_spt="$( cd -P "$( dirname "${spt_src}" )" && pwd )"
 spt_nm=$(basename ${spt_src}) # [sng] Script name (unlike $0, ${BASH_SOURCE[0]} works well with 'source <script>')
 
 if [ "${LMOD_SYSTEM_NAME}" = 'perlmutter' ]; then
@@ -22,6 +30,16 @@ else
     echo "${spt_nm}: ERROR Invalid \${rgn_rsn} = ${rgn_rsn}"
     exit 1
 fi # !HOSTNAME
+
+# Human-readable summary
+date_srt=$(date +"%s")
+if [ ${vrb_lvl} -ge ${vrb_3} ]; then
+    printf "RACMO raw data to flux timeseries invoked with command:\n"
+    echo "${cmd_ln}"
+fi # !vrb_lvl
+
+dbg_lvl=1
+[[ ${dbg_lvl} -ge 1 ]] && date_tm=$(date +"%s")
 
 drc_raw="${drc_root}/racmo/2.4.1/raw"
 drc_ts="${drc_root}/racmo/2.4.1/ts"
@@ -83,3 +101,14 @@ for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Full filename
     # if false; then
     #    fi # !false
 done # !fll_nm
+
+if [ ${dbg_lvl} -ge 1 ]; then
+    date_crr=$(date +"%s")
+    date_dff=$((date_crr-date_tm))
+    echo "Elapsed time to convert monthly sum to monthly flux timeseries $((date_dff/60))m$((date_dff % 60))s"
+fi # !dbg
+
+date_end=$(date +"%s")
+printf "Completed RACMO reformatting and climatology operations for input data at `date`\n"
+date_dff=$((date_end-date_srt))
+echo "Elapsed time $((date_dff/60))m$((date_dff % 60))s"
