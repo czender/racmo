@@ -1,0 +1,33 @@
+// $Header$ -*-C++-*-
+
+/* Usage: ncap2 -O -S era2elm.nco in.nc out.nc
+
+   Purpose: Convert from monthly sum ("monthlyS") to per-second rate (PSR)
+
+   Usage:
+   var_nm='smbgl'
+   ncap2 -O -v --script="var_nm=${var_nm}" -S ${HOME}/racmo/mthsum2flx.nco ~/nco/data/in.nc ~/foo.nc */ 
+
+if(!exists(var_nm)) var_nm="smbgl";
+
+*yr_srt=1980;
+*yr_nbr=41;
+*yr_end=yr_srt+yr_nbr;
+*mth_nbr=yr_nbr*12;
+if($time.size != mth_nbr){
+   print($time.size, "ERROR Time dimension size $time.size = %d");
+   print(mth_nbr,"Must equal mth_nbr = %d");
+} // !time.size
+
+// Create array of same length as time dimension of input variable
+*sec_per_mth[$time]=0; // noleap 365-day calendar, 0-based indexing
+sec_per_mth={2678400,2419200,2678400,2592000,2678400,2592000,2678400,2678400,2592000,2678400,2592000,2678400};
+*sec_per_mth_ts[$time]=0; // noleap 365-day calendar, 0-based indexing
+for(yr_idx=0;yr_idx<=yr_nbr;yr_idx++){
+   *mth_idx=yr_idx*12;
+   *sec_per_mth_ts[mth_idx:mth_idx+11]=sec_per_mth;
+} // !yr
+print(sec_per_mth_ts);
+
+// Do the math
+var_nm*=sec_per_mth_ts;
