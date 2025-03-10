@@ -10,19 +10,13 @@
 # Synchronize generated ice-sheet mask files to local grid directory
 # cd ${DATA}/grids;rsync 'zender@imua.ess.uci.edu:data/grids/msk_?is_r??.nc' .;ls -l msk_?is_r??.nc
 
-# Part 1: Convert raw RACMO gridfiles to standardized gridfiles and derive SCRIP grids
-# This part is slow and only needs be done when new grids are introduced so usually skip it
-if false; then
-    ~/racmo/racmo_raw2std.sh 
-fi # !false
-
-# 
 unset sec_per_mth # [s] Seconds per month
 declare -a sec_per_mth
 sec_per_mth=(0 2678400 2419200 2678400 2592000 2678400 2592000 2678400 2678400 2592000 2678400 2592000 2678400) # noleap 365-day calendar, 1-based indexing
 
-drc_in=/global/cfs/cdirs/fanssie/racmo/raw/RACMO2.4/FGRN055/mon_climos
-drc_in=/global/cfs/cdirs/fanssie/racmo/raw/RACMO2.4/PXANT11/???_climos
+# Locations of Chloe's GIS data
+# /global/cfs/cdirs/fanssie/racmo/raw/RACMO2.4/FGRN055/mon_climos
+# /global/cfs/cdirs/fanssie/racmo/raw/RACMO2.4/PXANT11/???_climos
 
 #drc_root='/global/cfs/cdirs/fanssie' # Perlmutter
 drc_root="${DATA}" # Spectral
@@ -51,7 +45,7 @@ for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Full filename
     echo "Processing variable ${var_nm} for region/resolution ${rgn_rsn}..."
 #    if false; then
     fl_in=${var_nm}_monthlyS_${rgn_rsn}_RACMO2.4.1_historical_${yyyymm_srt_end_in}.nc
-    fl_out=racmo2.4.1_${ice_nm}_${var_nm}_${yyyymm_srt_end_out}.nc
+    fl_out=${var_nm}_${ice_nm}_${yyyymm_srt_end_out}.nc
 
     # Convert to netCDF3 (to avoid rename bugs), eliminate unwanted variables, select 1980--2020
     cmd_sbs="ncks -O -6 -C --hdr_pad=10000 -d time,1980-01-01,2020-12-31 -x -v rlat,rlon,height ${drc_raw}/${fl_in} ${drc_ts}/${fl_out}"
@@ -63,20 +57,23 @@ for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Full filename
     echo ${cmd_rnm}
     eval ${cmd_rnm}
 
-    # Eliminate missing_value
-    cmd_att="ncatted -O -a missing_value,,d,, ${drc_ts}/${fl_out}"
-    echo ${cmd_att}
-    eval ${cmd_att}
+    # Convert from monthly sum ("monthlyS") to per-second rate (PSR)
+    cmd_flx="ncap2 -O -v -S ~/racmo/mthsum2flx.nco ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}" # works as of 20250310
+    echo ${cmd_flx}
+    eval ${cmd_flx}
 
     # Remove height dimension (fxm: if it exists)
     cmd_hgt="ncwa -O -a height ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}"
     echo ${cmd_hgt}
     eval ${cmd_hgt}
 
-    # Convert from monthly sum ("monthlyS") to per-second rate (PSR)
-    cmd_flx="ncap2 -O -v -S ~/racmo/mthsum2flx.nco ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}" # works as of 20250310
-    echo ${cmd_flx}
-    eval ${cmd_flx}
+    # Eliminate missing_value attribute and change units to fluxes not sums
+    if [ ${var_nm} = 'smbgl' ]; then
+	new_units='kg m-2 s-1'
+    fi # !var_nm
+    cmd_att="ncatted -O -a missing_value,,d,, -a units,${var_nm},o,c,\"${new_units}\" ${drc_ts}/${fl_out}"
+    echo ${cmd_att}
+    eval ${cmd_att}
 
     # Print space for tidy output
     echo ""

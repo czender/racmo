@@ -6,7 +6,7 @@
 
    Usage:
    var_nm='smbgl'
-   ncap2 -O -v -S ${HOME}/racmo/mthsum2flx.nco ~/nco/data/in.nc ~/foo.nc */ 
+   ncap2 -O -v -S ${HOME}/racmo/mthsum2flx.nco ${DATA}/racmo/2.4.1/ts/smbgl_racmo2.4.1_ais_smbgl_198001_202012.nc ~/foo.nc */ 
 
 //if(!exists(var_nm)) var_nm="smbgl";
 
@@ -20,13 +20,22 @@ if($time.size != mth_nbr){
 } // !time.size
 
 // Create array of same length as time dimension of input variable
-*sec_per_mth[$time]=0; // noleap 365-day calendar, 0-based indexing
-sec_per_mth(0:11)={2678400,2419200,2678400,2592000,2678400,2592000,2678400,2678400,2592000,2678400,2592000,2678400};
-*sec_per_mth_ts[$time]=0; // noleap 365-day calendar, 0-based indexing
+*sec_per_mth_no_leap[$time]=0; // [s] noleap 365-day calendar, 0-based indexing
+sec_per_mth_no_leap(0:11)={2678400,2419200,2678400,2592000,2678400,2592000,2678400,2678400,2592000,2678400,2592000,2678400};
+sec_per_mth[$time]=0; // [s] Timeseries of seconds-per-month
 for(*yr_idx=0;yr_idx<yr_nbr;yr_idx++){
-   *mth_idx=yr_idx*12;
-   *sec_per_mth_ts(mth_idx:mth_idx+11)=sec_per_mth(0:11);
+  *mth_idx=yr_idx*12;
+  sec_per_mth(mth_idx:mth_idx+11)=sec_per_mth_no_leap(0:11);
 } // !yr
+
+*feb_sec_lp_yr=2505600; // [s] Seconds in leap year Februaries
+for(*yr=yr_srt;yr<yr_end;yr++){
+  *feb_idx=(yr-yr_srt)*12+1;
+  // Adjust February times for Leap Years
+  if(yr%4 == 0 && (yr%100 != 0 || yr%400 == 0)) sec_per_mth(feb_idx)=feb_sec_lp_yr;
+} // !yr
+
+// print(sec_per_mth);
 
 @all=get_vars_in();
 *sz=@all.size();
@@ -34,7 +43,7 @@ for(*idx=0;idx<sz;idx++){
   @var_nm=@all(idx);
   if(*@var_nm.ndims() >= 3){
     // Do the math
-    *@var_nm/=sec_per_mth_ts;
+    *@var_nm/=sec_per_mth;
   } // !var_nm.ndims
 } // !idx
 
