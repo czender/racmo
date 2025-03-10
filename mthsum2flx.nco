@@ -6,7 +6,7 @@
 
    Usage:
    var_nm='smbgl'
-   ncap2 -O -v --script="var_nm=${var_nm}" -S ${HOME}/racmo/mthsum2flx.nco ~/nco/data/in.nc ~/foo.nc */ 
+   ncap2 -O -v -S ${HOME}/racmo/mthsum2flx.nco ~/nco/data/in.nc ~/foo.nc */ 
 
 //if(!exists(var_nm)) var_nm="smbgl";
 
@@ -34,7 +34,7 @@ for(*idx=0;idx<sz;idx++){
   @var_nm=@all(idx);
   if(*@var_nm.ndims() >= 3){
     // Do the math
-    *@var_nm*=sec_per_mth_ts;
+    *@var_nm/=sec_per_mth_ts;
   } // !var_nm.ndims
 } // !idx
 

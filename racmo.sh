@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Purpose: Workflow to convert raw RACMO v 2.4.1 data into format used by LIVVKit
-# Workflow invokes NCO
+# Purpose: Convert raw RACMO v2.4.1 data into format used by LIVVKit
+# Prequisites: NCO
 
 # Usage:
 # ~/racmo/racmo.sh 
@@ -28,32 +28,33 @@ drc_in=/global/cfs/cdirs/fanssie/racmo/raw/RACMO2.4/PXANT11/???_climos
 drc_root="${DATA}" # Spectral
 drc_raw="${drc_root}/racmo/2.4.1/raw"
 drc_ts="${drc_root}/racmo/2.4.1/ts"
-yyyymm_srt_ais=196001
-yyyymm_srt_gis=194501
 #for fll_nm in `ls ${drc_raw}`; do
 for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Full filename
     fl_in=$(basename ${fll_nm})
     # https://stackoverflow.com/questions/20348097/bash-extract-string-before-a-colon
     var_nm=${fl_in%%_*}
     # https://stackoverflow.com/questions/21077882/pattern-to-get-string-between-two-specific-words-characters-using-grep
-    rgn_sng=${fl_in#*monthlyS_}
-    rgn_sng=${rgn_sng%_RACMO2*}
-    if [ "${rgn_sng}" = "PXANT11" ]; then
+    rgn_rsn=${fl_in#*monthlyS_}
+    rgn_rsn=${rgn_rsn%_RACMO2*}
+    if [ "${rgn_rsn}" = "PXANT11" ]; then
 	ice_nm=ais
-    elif [ "${rgn_sng}" = "FGRN055" ]; then
-	ice_nm=ais
+	yyyymm_srt_end_in=196001_202312
+    elif [ "${rgn_rsn}" = "FGRN055" ]; then
+	ice_nm=gis
+	yyyymm_srt_end_in=194501_202308
     else
-	echo "${spt_nm}: ERROR Invalid \${rgn_sng} = ${rgn_sng}"
+	echo "${spt_nm}: ERROR Invalid \${rgn_rsn} = ${rgn_rsn}"
 	exit 1
-    fi # !rgn_sng
+    fi # !rgn_rsn
+    yyyymm_srt_end_out=198001_202012
 
-    echo "Processing variable ${var_nm} for region ${rgn_sng}..."
+    echo "Processing variable ${var_nm} for region/resolution ${rgn_rsn}..."
 #    if false; then
-    fl_in=smbgl_monthlyS_PXANT11_RACMO2.4.1_historical_196001_202312.nc
-    fl_out=racmo2.4.1_${ice_nm}_${var_nm}_198001_202012.nc
+    fl_in=${var_nm}_monthlyS_${rgn_rsn}_RACMO2.4.1_historical_${yyyymm_srt_end_in}.nc
+    fl_out=racmo2.4.1_${ice_nm}_${var_nm}_${yyyymm_srt_end_out}.nc
 
     # Convert to netCDF3 (to avoid rename bugs), eliminate unwanted variables, select 1980--2020
-    cmd_sbs="ncks -O -6 -C -d time,1980-01-01,2020-12-31 -x -v rlat,rlon,height ${drc_raw}/${fl_in} ${drc_ts}/${fl_out}"
+    cmd_sbs="ncks -O -6 -C --hdr_pad=10000 -d time,1980-01-01,2020-12-31 -x -v rlat,rlon,height ${drc_raw}/${fl_in} ${drc_ts}/${fl_out}"
     echo ${cmd_sbs}
     eval ${cmd_sbs}
 
@@ -73,10 +74,9 @@ for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Full filename
     eval ${cmd_hgt}
 
     # Convert from monthly sum ("monthlyS") to per-second rate (PSR)
-    cmd_flx="ncap2 -O -v --script="*var_nm=${var_nm}" -S ~/racmo/mthsum2flx.nco ${drc_ts}/${fl_out} ~/foo.nc" # works as of fxm
+    cmd_flx="ncap2 -O -v -S ~/racmo/mthsum2flx.nco ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}" # works as of 20250310
     echo ${cmd_flx}
     eval ${cmd_flx}
-    # ncap2 -O -s '*foo=1' ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}
 
     # Print space for tidy output
     echo ""
