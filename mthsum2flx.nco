@@ -22,13 +22,14 @@ if($time.size != mth_nbr){
 // Create array of same length as time dimension of input variable
 *sec_per_mth_no_leap[$time]=0; // [s] noleap 365-day calendar, 0-based indexing
 sec_per_mth_no_leap(0:11)={2678400,2419200,2678400,2592000,2678400,2592000,2678400,2678400,2592000,2678400,2592000,2678400};
+*feb_sec_lp_yr=2505600; // [s] Seconds in leap year Februaries
+
 sec_per_mth[$time]=0; // [s] Timeseries of seconds-per-month
 for(*yr_idx=0;yr_idx<yr_nbr;yr_idx++){
   *mth_idx=yr_idx*12;
   sec_per_mth(mth_idx:mth_idx+11)=sec_per_mth_no_leap(0:11);
 } // !yr
 
-*feb_sec_lp_yr=2505600; // [s] Seconds in leap year Februaries
 for(*yr=yr_srt;yr<yr_end;yr++){
   *feb_idx=(yr-yr_srt)*12+1;
   // Adjust February times for Leap Years
@@ -42,7 +43,7 @@ for(*yr=yr_srt;yr<yr_end;yr++){
 for(*idx=0;idx<sz;idx++){
   @var_nm=@all(idx);
   if(*@var_nm.ndims() >= 3){
-    // Do the math
+    // Convert from monthly sum to per-second rate
     *@var_nm/=sec_per_mth;
   } // !var_nm.ndims
 } // !idx

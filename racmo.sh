@@ -38,13 +38,26 @@ if [ ${vrb_lvl} -ge ${vrb_3} ]; then
     echo "${cmd_ln}"
 fi # !vrb_lvl
 
+# Set default values and paths
 dbg_lvl=1
-[[ ${dbg_lvl} -ge 1 ]] && date_tm=$(date +"%s")
-
 drc_raw="${drc_root}/racmo/2.4.1/raw"
 drc_ts="${drc_root}/racmo/2.4.1/ts"
-#for fll_nm in `ls ${drc_raw}`; do
-for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Full filename
+drc_clm="${drc_root}/racmo/2.4.1/clm"
+yr_srt=1980
+yr_end=2020
+
+# Define variables
+yyyy_srt=`printf "%04d" ${yr_srt}`
+yyyy_end=`printf "%04d" ${yr_end}`
+yyyymm_srt_end_out="${yyyy_srt}01_${yyyy_end}12" # 198001_202012
+
+# Step 1: Clean up raw data and convert per-month sums into per-second timeseries
+[[ ${dbg_lvl} -ge 1 ]] && date_tm=$(date +"%s")
+printf "Begin Step 1: Clean up raw data and convert per-month sums into per-second timeseries\n\n"
+for fll_nm in `ls ${drc_raw}`; do # Loop over full filenames
+#for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Debug loop over single filename
+#for fll_nm in `ls ${drc_raw}/gbot_*` ; do # Debug loop over single filename
+#for fll_nm in `` ; do # Skip loop
     fl_in=$(basename ${fll_nm})
     # https://stackoverflow.com/questions/20348097/bash-extract-string-before-a-colon
     var_nm=${fl_in%%_*}
@@ -61,7 +74,13 @@ for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Full filename
 	echo "${spt_nm}: ERROR Invalid \${rgn_rsn} = ${rgn_rsn}"
 	exit 1
     fi # !rgn_rsn
-    yyyymm_srt_end_out=198001_202012
+
+    # Exclude variables with weird dimensions, etc.
+    if [ ${var_nm} = 'gbot' ]; then
+	# gbot has two time dimensions (!)
+	printf "Excluding variable ${var_nm} which has two time dimensions\n\n"
+	continue
+    fi # !var_nm
 
     echo "Processing variable ${var_nm} for region/resolution ${rgn_rsn}..."
 #    if false; then
@@ -69,7 +88,7 @@ for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Full filename
     fl_out=${var_nm}_${ice_nm}_${yyyymm_srt_end_out}.nc
 
     # Convert to netCDF3 (to avoid rename bugs), eliminate unwanted variables, select 1980--2020
-    cmd_sbs="ncks -O -6 -C --hdr_pad=10000 -d time,1980-01-01,2020-12-31 -x -v rlat,rlon,height ${drc_raw}/${fl_in} ${drc_ts}/${fl_out}"
+    cmd_sbs="ncks -O -6 -C --hdr_pad=10000 -d time,${yr_srt}-01-01,${yr_end}-12-31 -x -v rlat,rlon,height ${drc_raw}/${fl_in} ${drc_ts}/${fl_out}"
     echo ${cmd_sbs}
     eval ${cmd_sbs}
 
@@ -105,7 +124,70 @@ done # !fll_nm
 if [ ${dbg_lvl} -ge 1 ]; then
     date_crr=$(date +"%s")
     date_dff=$((date_crr-date_tm))
-    echo "Elapsed time to convert monthly sum to monthly flux timeseries $((date_dff/60))m$((date_dff % 60))s"
+    printf "Elapsed time to clean raw data and convert monthly sum to monthly flux timeseries $((date_dff/60))m$((date_dff % 60))s\n\n"
+fi # !dbg
+
+# Step 2: Convert per-variable timeseries files to climos
+[[ ${dbg_lvl} -ge 1 ]] && date_clm=$(date +"%s")
+printf "Begin Step 2: Convert per-variable timeseries files to climos\n\n"
+for fll_nm in `ls ${drc_ts}`; do # Loop over full filenames
+#for fll_nm in `ls ${drc_ts}/smbgl_*` ; do # Debug loop over single filename
+#for fll_nm in `ls ${drc_ts}/gbot_*` ; do # Debug loop over single filename
+    fl_in=$(basename ${fll_nm})
+    # https://stackoverflow.com/questions/20348097/bash-extract-string-before-a-colon
+    var_nm=${fl_in%%_*}
+    drc_var=${drc_clm}/${var_nm}
+    ice_nm=${fl_in#*${var_nm}_}
+    ice_nm=${ice_nm%_${yyyymm_srt_end_out}*}
+    caseid=${var_nm}_${ice_nm}
+    
+    # Create directory to store monthly and climo files
+    if [ -n "${drc_var}" ] && [ ! -d "${drc_var}" ]; then 
+	cmd_mkd="mkdir -p ${drc_var}"
+	eval ${cmd_mkd}
+	if [ "$?" -ne 0 ]; then
+	    printf "${spt_nm}: ERROR Attempt to create regrid directory. Debug this:\n${cmd_mkd}\n"
+	    printf "${spt_nm}: HINT Creating a directory requires proper write permissions\n"
+	    exit 1
+	fi # !err
+    fi # !drc_var
+
+    printf "Decatenating variable ${var_nm} timeseries for ${ice_nm} into ${drc_var}\n"
+    let tm_idx=0
+    for yr in `seq ${yyyy_srt} ${yyyy_end}`; do
+	YYYY=`printf "%04d" ${yr}`
+	for mth in {1..12}; do
+	    MM=`printf "%02d" ${mth}`
+	    fl_out[${tm_idx}]="${caseid}_${YYYY}${MM}.nc"
+	    #printf "Decatenating variable ${var_nm} timeseries for ${ice_nm} into ${fl_out[${tm_idx}]}\n"
+
+	    # Extract current month info 
+	    cmd_sbs="ncks -O -d time,${tm_idx} ${drc_ts}/${fl_in} ${drc_var}/${fl_out[${tm_idx}]}"
+	    echo ${cmd_sbs}
+	    eval ${cmd_sbs}
+
+	    let tm_idx=$((tm_idx + 1))
+	done # !mth
+    done # !yr
+
+    # Create climos    
+    cmd_clm="ncclimo -c ${caseid}_${yyyy_srt}01.nc -s ${yyyy_srt} -e ${yyyy_end} -i ${drc_var} -o ${drc_var}"
+    printf "Creating ${var_nm} climatology with ${cmd_clm}\n"
+    echo ${cmd_clm}
+    eval ${cmd_clm}
+
+    # Remove monthly files to save space
+    cmd_cln="/bin/rm ${drc_var}/${caseid}_??????.nc"
+    printf "Cleaning ${var_nm} climatology with ${cmd_cln}\n"
+    echo ${cmd_cln}
+    eval ${cmd_cln}
+    
+done # !fll_nm
+
+if [ ${dbg_lvl} -ge 1 ]; then
+    date_crr=$(date +"%s")
+    date_dff=$((date_crr-date_clm))
+    printf "Elapsed time to convert monthly flux timeseries to climos $((date_dff/60))m$((date_dff % 60))s\n\n"
 fi # !dbg
 
 date_end=$(date +"%s")
