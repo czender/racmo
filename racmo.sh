@@ -7,7 +7,10 @@
 # ~/racmo/racmo.sh 
 # ~/racmo/racmo.sh > ~/foo.txt 2>&1 &
 
-# Locations of Chloe's GIS data
+# Locations of final processed RACMO data:
+# /global/cfs/cdirs/fanssie/racmo/2.4.1/clm
+
+# Locations of Chloe's original raw RACMO data:
 # /global/cfs/cdirs/fanssie/racmo/raw/RACMO2.4/FGRN055/mon_climos
 # /global/cfs/cdirs/fanssie/racmo/raw/RACMO2.4/PXANT11/???_climos
 
@@ -34,14 +37,14 @@ fi # !HOSTNAME
 # Human-readable summary
 date_srt=$(date +"%s")
 if [ ${vrb_lvl} -ge ${vrb_3} ]; then
-    printf "RACMO raw data to flux timeseries invoked with command:\n"
+    printf "RACMO raw data to timeseries invoked with command:\n"
     echo "${cmd_ln}"
 fi # !vrb_lvl
 
 # Set default values and paths
 dbg_lvl=1
 drc_raw="${drc_root}/racmo/2.4.1/raw"
-drc_ts="${drc_root}/racmo/2.4.1/ts"
+Drc_ts="${drc_root}/racmo/2.4.1/ts"
 drc_clm="${drc_root}/racmo/2.4.1/clm"
 yr_srt=1980
 yr_end=2020
@@ -53,8 +56,9 @@ yyyymm_srt_end_out="${yyyy_srt}01_${yyyy_end}12" # 198001_202012
 
 # Step 1: Clean up raw data and convert per-month sums into per-second timeseries
 [[ ${dbg_lvl} -ge 1 ]] && date_tm=$(date +"%s")
-printf "Begin Step 1: Clean up raw data and convert per-month sums into per-second timeseries\n\n"
-for fll_nm in `ls ${drc_raw}`; do # Loop over full filenames
+printf "Begin Step 1: Clean up raw data and, when necessary, convert per-month sums into per-second timeseries\n\n"
+for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA filename
+#for fll_nm in `ls ${drc_raw}`; do # Loop over full filenames
 #for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Debug loop over single filename
 #for fll_nm in `ls ${drc_raw}/gbot_*` ; do # Debug loop over single filename
 #for fll_nm in `` ; do # Skip loop
@@ -62,7 +66,7 @@ for fll_nm in `ls ${drc_raw}`; do # Loop over full filenames
     # https://stackoverflow.com/questions/20348097/bash-extract-string-before-a-colon
     var_nm=${fl_in%%_*}
     # https://stackoverflow.com/questions/21077882/pattern-to-get-string-between-two-specific-words-characters-using-grep
-    rgn_rsn=${fl_in#*monthlyS_}
+    rgn_rsn=${fl_in#*monthly?_}
     rgn_rsn=${rgn_rsn%_RACMO2*}
     if [ "${rgn_rsn}" = "PXANT11" ]; then
 	ice_nm=ais
@@ -74,7 +78,12 @@ for fll_nm in `ls ${drc_raw}`; do # Loop over full filenames
 	echo "${spt_nm}: ERROR Invalid \${rgn_rsn} = ${rgn_rsn}"
 	exit 1
     fi # !rgn_rsn
-
+    flg_mth_sum=false
+    flg_mth_avg=false
+    if [[ "${fl_in}" == *'monthlyS'* ]]; then flg_mth_sum=true; fi
+    if [[ "${fl_in}" == *'monthlyA'* ]]; then flg_mth_avg=true; fi
+    if ${flg_mth_sum}; then mth_sng='monthlyS'; else mth_sng='monthlyA'; fi
+    
     # Exclude variables with weird dimensions, etc.
     if [ ${var_nm} = 'gbot' ]; then
 	# gbot has two time dimensions (!)
@@ -84,7 +93,7 @@ for fll_nm in `ls ${drc_raw}`; do # Loop over full filenames
 
     echo "Processing variable ${var_nm} for region/resolution ${rgn_rsn}..."
 #    if false; then
-    fl_in=${var_nm}_monthlyS_${rgn_rsn}_RACMO2.4.1_historical_${yyyymm_srt_end_in}.nc
+    fl_in=${var_nm}_${mth_sng}_${rgn_rsn}_RACMO2.4.1_historical_${yyyymm_srt_end_in}.nc
     fl_out=${var_nm}_${ice_nm}_${yyyymm_srt_end_out}.nc
 
     # Convert to netCDF3 (to avoid rename bugs), eliminate unwanted variables, select 1980--2020
@@ -97,10 +106,12 @@ for fll_nm in `ls ${drc_raw}`; do # Loop over full filenames
     echo ${cmd_rnm}
     eval ${cmd_rnm}
 
-    # Convert from monthly sum ("monthlyS") to per-second rate (PSR)
-    cmd_flx="ncap2 -O -v -S ~/racmo/mthsum2flx.nco ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}" # works as of 20250310
-    echo ${cmd_flx}
-    eval ${cmd_flx}
+    if ${flg_mth_sum}; then
+	# Convert from monthly sum ("monthlyS") to per-second rate (PSR)
+	cmd_flx="ncap2 -O -v -S ~/racmo/mthsum2flx.nco ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}" # works as of 20250310
+	echo ${cmd_flx}
+	eval ${cmd_flx}
+    fi # !flg_mth_sum
 
     # Remove height dimension (fxm: if it exists)
     cmd_hgt="ncwa -O -a height ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}"
@@ -124,13 +135,14 @@ done # !fll_nm
 if [ ${dbg_lvl} -ge 1 ]; then
     date_crr=$(date +"%s")
     date_dff=$((date_crr-date_tm))
-    printf "Elapsed time to clean raw data and convert monthly sum to monthly flux timeseries $((date_dff/60))m$((date_dff % 60))s\n\n"
+    printf "Elapsed time to clean raw data and process monthly timeseries $((date_dff/60))m$((date_dff % 60))s\n\n"
 fi # !dbg
 
 # Step 2: Convert per-variable timeseries files to climos
 [[ ${dbg_lvl} -ge 1 ]] && date_clm=$(date +"%s")
 printf "Begin Step 2: Convert per-variable timeseries files to climos\n\n"
-for fll_nm in `ls ${drc_ts}`; do # Loop over full filenames
+for fll_nm in `ls ${drc_ts}/tas*` `ls ${drc_ts}/tsgl*` `ls ${drc_ts}/u10*` `ls ${drc_ts}/v10*` ; do # Loop over monthlyA filenames
+#for fll_nm in `ls ${drc_ts}`; do # Loop over full filenames
 #for fll_nm in `ls ${drc_ts}/smbgl_*` ; do # Debug loop over single filename
 #for fll_nm in `ls ${drc_ts}/gbot_*` ; do # Debug loop over single filename
     fl_in=$(basename ${fll_nm})
@@ -187,7 +199,7 @@ done # !fll_nm
 if [ ${dbg_lvl} -ge 1 ]; then
     date_crr=$(date +"%s")
     date_dff=$((date_crr-date_clm))
-    printf "Elapsed time to convert monthly flux timeseries to climos $((date_dff/60))m$((date_dff % 60))s\n\n"
+    printf "Elapsed time to convert monthly timeseries to climos $((date_dff/60))m$((date_dff % 60))s\n\n"
 fi # !dbg
 
 date_end=$(date +"%s")
