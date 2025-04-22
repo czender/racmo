@@ -44,7 +44,7 @@ fi # !vrb_lvl
 # Set default values and paths
 dbg_lvl=1
 drc_raw="${drc_root}/racmo/2.4.1/raw"
-Drc_ts="${drc_root}/racmo/2.4.1/ts"
+drc_ts="${drc_root}/racmo/2.4.1/ts"
 drc_clm="${drc_root}/racmo/2.4.1/clm"
 yr_srt=1980
 yr_end=2020
