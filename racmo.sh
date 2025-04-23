@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/Usr/bin/env bash
 
 # Purpose: Convert raw RACMO v2.4.1 data into LIVVKit input
 # Prequisites: NCO
@@ -54,13 +54,13 @@ yyyy_srt=`printf "%04d" ${yr_srt}`
 yyyy_end=`printf "%04d" ${yr_end}`
 yyyymm_srt_end_out="${yyyy_srt}01_${yyyy_end}12" # 198001_202012
 
-# Step 1: Clean up raw data and convert per-month sums into per-second timeseries
+# Step 1: Clean up raw data and convert per-month sums into per-second rates where appropriate
 [[ ${dbg_lvl} -ge 1 ]] && date_tm=$(date +"%s")
 printf "Begin Step 1: Clean up raw data and, when necessary, convert per-month sums into per-second timeseries\n\n"
-for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA filename
-#for fll_nm in `ls ${drc_raw}`; do # Loop over full filenames
-#for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Debug loop over single filename
-#for fll_nm in `ls ${drc_raw}/gbot_*` ; do # Debug loop over single filename
+for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA fields
+#for fll_nm in `ls ${drc_raw}`; do # Loop over all fields
+#for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Debug loop over single field
+#for fll_nm in `ls ${drc_raw}/gbot_*` ; do # Debug loop over single field
 #for fll_nm in `` ; do # Skip loop
     fl_in=$(basename ${fll_nm})
     # https://stackoverflow.com/questions/20348097/bash-extract-string-before-a-colon
@@ -78,6 +78,7 @@ for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA filename
 	echo "${spt_nm}: ERROR Invalid \${rgn_rsn} = ${rgn_rsn}"
 	exit 1
     fi # !rgn_rsn
+    # Is field stored as monthly sums ("monthlyS") or averages ("monthlyA")?
     flg_mth_sum=false
     flg_mth_avg=false
     if [[ "${fl_in}" == *'monthlyS'* ]]; then flg_mth_sum=true; fi
@@ -92,7 +93,6 @@ for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA filename
     fi # !var_nm
 
     echo "Processing variable ${var_nm} for region/resolution ${rgn_rsn}..."
-#    if false; then
     fl_in=${var_nm}_${mth_sng}_${rgn_rsn}_RACMO2.4.1_historical_${yyyymm_srt_end_in}.nc
     fl_out=${var_nm}_${ice_nm}_${yyyymm_srt_end_out}.nc
 
@@ -101,13 +101,13 @@ for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA filename
     echo ${cmd_sbs}
     eval ${cmd_sbs}
 
-    # Make lon,lat coordinates
+    # Make lon,lat coordinates, ensure Panoply can plot output
     cmd_rnm="ncrename -O -d .rlon,lon -d .rlat,lat -a .grid_mapping,grid_mapping_renamed_for_Panoply_sanity ${drc_ts}/${fl_out}"
     echo ${cmd_rnm}
     eval ${cmd_rnm}
 
     if ${flg_mth_sum}; then
-	# Convert from monthly sum ("monthlyS") to per-second rate (PSR)
+	# Convert from monthly sum ("monthlyS") to monthly mean rate (aka, per-second rate (PSR))
 	cmd_flx="ncap2 -O -v -S ~/racmo/mthsum2flx.nco ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}" # works as of 20250310
 	echo ${cmd_flx}
 	eval ${cmd_flx}
@@ -118,7 +118,8 @@ for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA filename
     echo ${cmd_hgt}
     eval ${cmd_hgt}
 
-    # Eliminate missing_value attribute and change units to fluxes not sums
+    # Eliminate missing_value attribute and change units from sums to fluxes where appropriate
+    # fxm: do this for any monthly sum field with units "kg m-2"
     if [ ${var_nm} = 'smbgl' ]; then
 	new_units='kg m-2 s-1'
     fi # !var_nm
@@ -128,8 +129,6 @@ for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA filename
 
     # Print space for tidy output
     echo ""
-    # if false; then
-    #    fi # !false
 done # !fll_nm
 
 if [ ${dbg_lvl} -ge 1 ]; then
@@ -141,10 +140,10 @@ fi # !dbg
 # Step 2: Convert per-variable timeseries files to climos
 [[ ${dbg_lvl} -ge 1 ]] && date_clm=$(date +"%s")
 printf "Begin Step 2: Convert per-variable timeseries files to climos\n\n"
-for fll_nm in `ls ${drc_ts}/tas*` `ls ${drc_ts}/tsgl*` `ls ${drc_ts}/u10*` `ls ${drc_ts}/v10*` ; do # Loop over monthlyA filenames
-#for fll_nm in `ls ${drc_ts}`; do # Loop over full filenames
-#for fll_nm in `ls ${drc_ts}/smbgl_*` ; do # Debug loop over single filename
-#for fll_nm in `ls ${drc_ts}/gbot_*` ; do # Debug loop over single filename
+for fll_nm in `ls ${drc_ts}/tas*` `ls ${drc_ts}/tsgl*` `ls ${drc_ts}/u10*` `ls ${drc_ts}/v10*` ; do # Loop over monthlyA fields
+#for fll_nm in `ls ${drc_ts}`; do # Loop over all fields
+#for fll_nm in `ls ${drc_ts}/smbgl_*` ; do # Debug loop over single field
+#for fll_nm in `ls ${drc_ts}/gbot_*` ; do # Debug loop over single field
     fl_in=$(basename ${fll_nm})
     # https://stackoverflow.com/questions/20348097/bash-extract-string-before-a-colon
     var_nm=${fl_in%%_*}
@@ -158,7 +157,7 @@ for fll_nm in `ls ${drc_ts}/tas*` `ls ${drc_ts}/tsgl*` `ls ${drc_ts}/u10*` `ls $
 	cmd_mkd="mkdir -p ${drc_var}"
 	eval ${cmd_mkd}
 	if [ "$?" -ne 0 ]; then
-	    printf "${spt_nm}: ERROR Attempt to create regrid directory. Debug this:\n${cmd_mkd}\n"
+	    printf "${spt_nm}: ERROR Attempt to create output climo directory. Debug this:\n${cmd_mkd}\n"
 	    printf "${spt_nm}: HINT Creating a directory requires proper write permissions\n"
 	    exit 1
 	fi # !err
