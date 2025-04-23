@@ -113,7 +113,7 @@ for fll_nm in `ls ${drc_raw}`; do # Loop over all fields
 	eval ${cmd_flx}
 
 	# Eliminate missing_value attribute and change units from sums to fluxes where appropriate
-	cmd_att="ncatted -O -a missing_value,,d,, -a units,${var_nm},a,c,\" s-1\" -a Note,${var_nm},o,c,\"Converted values and units from raw RACMO monthly sum to ELM-compatible monthly mean rate" ${drc_ts}/${fl_out}"
+	cmd_att="ncatted -O -a missing_value,,d,, -a units,${var_nm},a,c,\" s-1\" -a Note,${var_nm},o,c,\"Converted values and units from raw RACMO monthly sum to ELM-compatible monthly mean rate\" ${drc_ts}/${fl_out}"
 	echo ${cmd_att}
 	eval ${cmd_att}
     else
