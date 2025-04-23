@@ -6,7 +6,8 @@
 
    Usage:
    var_nm='smbgl'
-   ncap2 -O -v -S ${HOME}/racmo/mthsum2flx.nco ${DATA}/racmo/2.4.1/ts/smbgl_racmo2.4.1_ais_smbgl_198001_202012.nc ~/foo.nc */ 
+   ncap2 -O -v -S ${HOME}/racmo/mthsum2flx.nco ${DATA}/racmo/2.4.1/raw/smbgl_monthlyS_FGRN055_RACMO2.4.1_historical_194501_202308.nc ~/foo.nc
+   ncap2 -O -v -S ${HOME}/racmo/mthsum2flx.nco ${DATA}/racmo/2.4.1/ts/smbgl_ais_198001_202012.nc ~/foo.nc */ 
 
 //if(!exists(var_nm)) var_nm="smbgl";
 
@@ -38,6 +39,7 @@ for(*yr=yr_srt;yr<yr_end;yr++){
 
 // print(sec_per_mth);
 
+// Use NCO variable pointers = vpointers (http://nco.sf.net/nco.html#vpointer)
 @all=get_vars_in();
 *sz=@all.size();
 for(*idx=0;idx<sz;idx++){
@@ -45,8 +47,8 @@ for(*idx=0;idx<sz;idx++){
   if(*@var_nm.ndims() >= 3){
     // Convert from monthly sum to per-second rate
     *@var_nm/=sec_per_mth;
-    // Add " s-1" to units
-    *@var_nm@units=push(*@var_nm@units," s-1");
+    // Add " s-1" to units fxm: illegal syntax
+    // (*@var_nm)@units=push((*@var_nm)@units," s-1");
   } // !Var_nm.ndims
 } // !idx
 

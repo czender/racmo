@@ -57,8 +57,8 @@ yyyymm_srt_end_out="${yyyy_srt}01_${yyyy_end}12" # 198001_202012
 # Step 1: Clean up raw data and convert per-month sums into per-second rates where appropriate
 [[ ${dbg_lvl} -ge 1 ]] && date_tm=$(date +"%s")
 printf "Begin Step 1: Clean up raw data and, when necessary, convert per-month sums into per-second timeseries\n\n"
-for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA fields
-#for fll_nm in `ls ${drc_raw}`; do # Loop over all fields
+#for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA fields
+for fll_nm in `ls ${drc_raw}`; do # Loop over all fields
 #for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Debug loop over single field
 #for fll_nm in `ls ${drc_raw}/gbot_*` ; do # Debug loop over single field
 #for fll_nm in `` ; do # Skip loop
@@ -111,21 +111,22 @@ for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA fields
 	cmd_flx="ncap2 -O -v -S ~/racmo/mthsum2flx.nco ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}" # works as of 20250310
 	echo ${cmd_flx}
 	eval ${cmd_flx}
+
+	# Eliminate missing_value attribute and change units from sums to fluxes where appropriate
+	cmd_att="ncatted -O -a missing_value,,d,, -a units,${var_nm},a,c,\" s-1\" -a Note,${var_nm},o,c,\"Converted values and units from raw RACMO monthly sum to ELM-compatible monthly mean rate" ${drc_ts}/${fl_out}"
+	echo ${cmd_att}
+	eval ${cmd_att}
+    else
+	# Eliminate missing_value attribute for fields that were originally monthly rates
+	cmd_att="ncatted -O -a missing_value,,d,, ${drc_ts}/${fl_out}"
+	echo ${cmd_att}
+	eval ${cmd_att}
     fi # !flg_mth_sum
 
     # Remove height dimension (fxm: if it exists)
     cmd_hgt="ncwa -O -a height ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}"
     echo ${cmd_hgt}
     eval ${cmd_hgt}
-
-    # Eliminate missing_value attribute and change units from sums to fluxes where appropriate
-    # fxm: do this for any monthly sum field with units "kg m-2"
-    if [ ${var_nm} = 'smbgl' ]; then
-	new_units='kg m-2 s-1'
-    fi # !var_nm
-    cmd_att="ncatted -O -a missing_value,,d,, -a units,${var_nm},o,c,\"${new_units}\" ${drc_ts}/${fl_out}"
-    echo ${cmd_att}
-    eval ${cmd_att}
 
     # Print space for tidy output
     echo ""
@@ -140,8 +141,8 @@ fi # !dbg
 # Step 2: Convert per-variable timeseries files to climos
 [[ ${dbg_lvl} -ge 1 ]] && date_clm=$(date +"%s")
 printf "Begin Step 2: Convert per-variable timeseries files to climos\n\n"
-for fll_nm in `ls ${drc_ts}/tas*` `ls ${drc_ts}/tsgl*` `ls ${drc_ts}/u10*` `ls ${drc_ts}/v10*` ; do # Loop over monthlyA fields
-#for fll_nm in `ls ${drc_ts}`; do # Loop over all fields
+#for fll_nm in `ls ${drc_ts}/tas*` `ls ${drc_ts}/tsgl*` `ls ${drc_ts}/u10*` `ls ${drc_ts}/v10*` ; do # Loop over monthlyA fields
+for fll_nm in `ls ${drc_ts}`; do # Loop over all fields
 #for fll_nm in `ls ${drc_ts}/smbgl_*` ; do # Debug loop over single field
 #for fll_nm in `ls ${drc_ts}/gbot_*` ; do # Debug loop over single field
     fl_in=$(basename ${fll_nm})
@@ -183,13 +184,13 @@ for fll_nm in `ls ${drc_ts}/tas*` `ls ${drc_ts}/tsgl*` `ls ${drc_ts}/u10*` `ls $
 
     # Create climos    
     cmd_clm="ncclimo -c ${caseid}_${yyyy_srt}01.nc -s ${yyyy_srt} -e ${yyyy_end} -i ${drc_var} -o ${drc_var}"
-    printf "Creating ${var_nm} climatology with ${cmd_clm}\n"
+    printf "\nCreating ${var_nm} climatology with ${cmd_clm}\n"
     echo ${cmd_clm}
     eval ${cmd_clm}
 
     # Remove monthly files to save space
     cmd_cln="/bin/rm ${drc_var}/${caseid}_??????.nc"
-    printf "Cleaning ${var_nm} climatology with ${cmd_cln}\n"
+    printf "\nCleaning ${var_nm} climatology with ${cmd_cln}\n"
     echo ${cmd_cln}
     eval ${cmd_cln}
     
