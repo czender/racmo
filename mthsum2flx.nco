@@ -1,8 +1,8 @@
 // $Header$ -*-C++-*-
 
-/* Usage: ncap2 -O -S era2elm.nco in.nc out.nc
+/* Usage: ncap2 -O -S mthsum2flx.nco in.nc out.nc
 
-   Purpose: Convert from monthly sum ("monthlyS") to per-second rate (PSR)
+   Purpose: Convert from monthly sum ("monthlyS") to monthly mean, aka per-second rate (PSR)
 
    Usage:
    var_nm='smbgl'
@@ -45,6 +45,8 @@ for(*idx=0;idx<sz;idx++){
   if(*@var_nm.ndims() >= 3){
     // Convert from monthly sum to per-second rate
     *@var_nm/=sec_per_mth;
-  } // !var_nm.ndims
+    // Add " s-1" to units
+    *@var_nm@units=push(*@var_nm@units," s-1");
+  } // !Var_nm.ndims
 } // !idx
 
