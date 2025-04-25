@@ -57,8 +57,8 @@ yyyymm_srt_end_out="${yyyy_srt}01_${yyyy_end}12" # 198001_202012
 # Step 1: Clean up raw data and convert per-month sums into per-second rates where appropriate
 [[ ${dbg_lvl} -ge 1 ]] && date_tm=$(date +"%s")
 printf "Begin Step 1: Clean up raw data and, when necessary, convert per-month sums into per-second timeseries\n\n"
-#for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA fields
 for fll_nm in `ls ${drc_raw}`; do # Loop over all fields
+#for fll_nm in `ls ${drc_raw}/*monthlyA*`; do # Loop over monthlyA fields
 #for fll_nm in `ls ${drc_raw}/smbgl_*` ; do # Debug loop over single field
 #for fll_nm in `ls ${drc_raw}/gbot_*` ; do # Debug loop over single field
 #for fll_nm in `` ; do # Skip loop
@@ -111,17 +111,12 @@ for fll_nm in `ls ${drc_raw}`; do # Loop over all fields
 	cmd_flx="ncap2 -O -v -S ~/racmo/mthsum2flx.nco ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}" # works as of 20250310
 	echo ${cmd_flx}
 	eval ${cmd_flx}
-
-	# Eliminate missing_value attribute and change units from sums to fluxes where appropriate
-	cmd_att="ncatted -O -a missing_value,,d,, -a units,${var_nm},a,c,\" s-1\" -a Note,${var_nm},o,c,\"Converted values and units from raw RACMO monthly sum to ELM-compatible monthly mean rate\" ${drc_ts}/${fl_out}"
-	echo ${cmd_att}
-	eval ${cmd_att}
-    else
-	# Eliminate missing_value attribute for fields that were originally monthly rates
-	cmd_att="ncatted -O -a missing_value,,d,, ${drc_ts}/${fl_out}"
-	echo ${cmd_att}
-	eval ${cmd_att}
     fi # !flg_mth_sum
+
+    # Eliminate missing_value attribute for fields that were originally monthly rates
+    cmd_att="ncatted -O -a missing_value,,d,, ${drc_ts}/${fl_out}"
+    echo ${cmd_att}
+    eval ${cmd_att}
 
     # Remove height dimension (fxm: if it exists)
     cmd_hgt="ncwa -O -a height ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}"
@@ -141,8 +136,8 @@ fi # !dbg
 # Step 2: Convert per-variable timeseries files to climos
 [[ ${dbg_lvl} -ge 1 ]] && date_clm=$(date +"%s")
 printf "Begin Step 2: Convert per-variable timeseries files to climos\n\n"
-#for fll_nm in `ls ${drc_ts}/tas*` `ls ${drc_ts}/tsgl*` `ls ${drc_ts}/u10*` `ls ${drc_ts}/v10*` ; do # Loop over monthlyA fields
 for fll_nm in `ls ${drc_ts}`; do # Loop over all fields
+#for fll_nm in `ls ${drc_ts}/tas*` `ls ${drc_ts}/tsgl*` `ls ${drc_ts}/u10*` `ls ${drc_ts}/v10*` ; do # Loop over monthlyA fields
 #for fll_nm in `ls ${drc_ts}/smbgl_*` ; do # Debug loop over single field
 #for fll_nm in `ls ${drc_ts}/gbot_*` ; do # Debug loop over single field
     fl_in=$(basename ${fll_nm})

@@ -2,14 +2,11 @@
 
 /* Usage: ncap2 -O -S mthsum2flx.nco in.nc out.nc
 
-   Purpose: Convert from monthly sum ("monthlyS") to monthly mean, aka per-second rate (PSR)
+   Purpose: Convert field from monthly sum ("monthlyS") to monthly mean, aka per-second rate (PSR)
 
    Usage:
-   var_nm='smbgl'
    ncap2 -O -v -S ${HOME}/racmo/mthsum2flx.nco ${DATA}/racmo/2.4.1/raw/smbgl_monthlyS_FGRN055_RACMO2.4.1_historical_194501_202308.nc ~/foo.nc
    ncap2 -O -v -S ${HOME}/racmo/mthsum2flx.nco ${DATA}/racmo/2.4.1/ts/smbgl_ais_198001_202012.nc ~/foo.nc */ 
-
-//if(!exists(var_nm)) var_nm="smbgl";
 
 *yr_srt=1980;
 *yr_nbr=41;
@@ -47,8 +44,11 @@ for(*idx=0;idx<sz;idx++){
   if(*@var_nm.ndims() >= 3){
     // Convert from monthly sum to per-second rate
     *@var_nm/=sec_per_mth;
-    // Add " s-1" to units fxm: illegal syntax
-    // (*@var_nm)@units=push((*@var_nm)@units," s-1");
+    // Add " s-1" to units (so "J m-2" becomes "J m-2 s-1" and "kg m-2" becomes "kg m-2 s-1")
+    @att_units=sprint(@var_nm,"%s@units");
+    *@att_units=push(*@att_units," s-1");
+    @att_note=sprint(@var_nm,"%s@note");
+    *@att_note="Converted values and units from raw RACMO monthly sum to ELM-compatible monthly mean rate";
   } // !Var_nm.ndims
 } // !idx
 
