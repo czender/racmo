@@ -1,4 +1,4 @@
-#!/Usr/bin/env bash
+#!/usr/bin/env bash
 
 # Purpose: Convert raw RACMO v2.4.1 data into LIVVKit input
 # Prequisites: NCO
@@ -6,6 +6,14 @@
 # Usage:
 # ~/racmo/racmo.sh 
 # ~/racmo/racmo.sh > ~/foo.txt 2>&1 &
+
+# Production:
+# screen # Start screen
+# ~/racmo/racmo.sh > ~/foo.txt 2>&1 &
+# Ctl-A D # Detach screen
+# tail ~/foo.txt # Monitor progress
+# screen -ls # List screens
+# screen -r <ID> # Re-attach screen
 
 # Locations of final processed RACMO data:
 # /global/cfs/cdirs/fanssie/racmo/2.4.1/clm
@@ -113,8 +121,8 @@ for fll_nm in `ls ${drc_raw}`; do # Loop over all fields
 	eval ${cmd_flx}
     fi # !flg_mth_sum
 
-    # Eliminate missing_value attribute for fields that were originally monthly rates
-    cmd_att="ncatted -O -a missing_value,,d,, ${drc_ts}/${fl_out}"
+    # Eliminate missing_value attribute, add standard names
+    cmd_att="ncatted -O -a missing_value,,d,, -a standard_name,lon,o,c,longitude -a standard_name,lat,o,c,latitude -a standard_name,time,o,c,time -a axis,time,o,c,T ${drc_ts}/${fl_out}"
     echo ${cmd_att}
     eval ${cmd_att}
 
