@@ -126,8 +126,8 @@ for fll_nm in `ls ${drc_raw}`; do # Loop over all fields
     echo ${cmd_att}
     eval ${cmd_att}
 
-    # Remove height dimension (fxm: if it exists)
-    cmd_hgt="ncwa -O -a height ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}"
+    # Remove height dimension (fxm: if it exists), though do not add a cell_methods attribute about it
+    cmd_hgt="ncwa -O --no_cll_mth -a height ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}"
     echo ${cmd_hgt}
     eval ${cmd_hgt}
 
