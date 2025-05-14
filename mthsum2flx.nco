@@ -42,13 +42,13 @@ for(*yr=yr_srt;yr<yr_end;yr++){
 for(*idx=0;idx<sz;idx++){
   @var_nm=@all(idx);
   if(*@var_nm.ndims() >= 3){
-    // Convert from monthly sum to per-second rate
+    // Convert geophysical field from monthly sum to per-second rate
     *@var_nm/=sec_per_mth;
     // Add " s-1" to units (so "J m-2" becomes "J m-2 s-1" and "kg m-2" becomes "kg m-2 s-1")
     @att_units=sprint(@var_nm,"%s@units");
     *@att_units=push(*@att_units," s-1");
     @att_note=sprint(@var_nm,"%s@note");
     *@att_note="Converted values and units from raw RACMO monthly sum to ELM-compatible monthly mean rate";
-  } // !Var_nm.ndims
+  } // !var_nm.ndims
 } // !idx
 
