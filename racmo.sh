@@ -5,7 +5,7 @@
 
 # Usage:
 # ~/racmo/racmo.sh 
-# ~/racmo/racmo.sh > ~/foo.txt 2>&1 &
+# ~/racmo/racmo.sh > ~/foo.txt 2>&1 & # Takes ~85m30s on Perlmutter login node
 
 # Production:
 # screen # Start screen
