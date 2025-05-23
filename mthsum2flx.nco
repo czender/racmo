@@ -8,6 +8,8 @@
    ncap2 -O -v -S ${HOME}/racmo/mthsum2flx.nco ${DATA}/racmo/2.4.1/raw/smbgl_monthlyS_FGRN055_RACMO2.4.1_historical_194501_202308.nc ~/foo.nc
    ncap2 -O -v -S ${HOME}/racmo/mthsum2flx.nco ${DATA}/racmo/2.4.1/ts/smbgl_ais_198001_202012.nc ~/foo.nc */ 
 
+time_bnds=time_bnds; // Otherwise time_bnds is dropped from output unless script is call with ncap2 -v
+
 *yr_srt=1980;
 *yr_nbr=41;
 *yr_end=yr_srt+yr_nbr;

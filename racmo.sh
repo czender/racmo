@@ -116,7 +116,7 @@ for fll_nm in `ls ${drc_raw}`; do # Loop over all fields
 
     if ${flg_mth_sum}; then
 	# Convert field from monthly sum ("monthlyS") to monthly mean rate (aka, per-second rate (PSR))
-	cmd_flx="ncap2 -O -S ~/racmo/mthsum2flx.nco ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}" # works as of 20250310
+	cmd_flx="ncap2 -v -O -S ~/racmo/mthsum2flx.nco ${drc_ts}/${fl_out} ${drc_ts}/${fl_out}" # works as of 20250310
 	echo ${cmd_flx}
 	eval ${cmd_flx}
     fi # !flg_mth_sum
